@@ -14,6 +14,7 @@ console.log('DB_PORT:', process.env.DB_PORT);
 console.log('DB_USER:', process.env.DB_USER);
 console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
 console.log('DB_NAME:', process.env.DB_NAME);
+
 @Module({
   imports: [ContestantsModule, BattlesModule, DictatorsModule, SponsorsModule, TransactionsModule,
     ConfigModule.forRoot({
@@ -24,12 +25,15 @@ console.log('DB_NAME:', process.env.DB_NAME);
 
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: process.env.DATABASE_URL,
+      url: process.env.DATABASE_URL || '', // Evita el error de TypeScript
+      ssl: process.env.DATABASE_URL?.includes("sslmode=no-verify") ? false : { rejectUnauthorized: false },
+      extra: {
+        ssl: {
+          rejectUnauthorized: false,
+        },
+      },
       synchronize: true,
       autoLoadEntities: true,
-      ssl: {
-        rejectUnauthorized: false,
-      },
     }),
     
   ],
