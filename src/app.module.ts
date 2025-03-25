@@ -6,11 +6,14 @@ import { BattlesModule } from './battles/battles.module';
 import { DictatorsModule } from './dictators/dictators.module';
 import { SponsorsModule } from './sponsors/sponsors.module';
 import { TransactionsModule } from './transactions/transactions.module';
-
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 
 
 @Module({
+  controllers: [AppController], // Asegura que esté aquí
+  providers: [AppService],
   imports: [ContestantsModule, BattlesModule, DictatorsModule, SponsorsModule, TransactionsModule,
     ConfigModule.forRoot({
       envFilePath: './.env', // Asegura que la ruta sea correcta
