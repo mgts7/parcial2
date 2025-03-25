@@ -27,10 +27,8 @@ console.log('DB_NAME:', process.env.DB_NAME);
       url: process.env.DATABASE_URL,
       synchronize: true,
       autoLoadEntities: true,
-      extra: {
-        ssl: {
-          rejectUnauthorized: false,
-        },
+      ssl: {
+        rejectUnauthorized: false,
       },
     }),
     
