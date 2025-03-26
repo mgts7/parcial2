@@ -10,7 +10,6 @@ export class AppController {
 
   @Get()
   getHome(@Res() res: Response) {
-    const filePath = join(__dirname, '..', 'public', 'index.html'); // Ruta del archivo
-    return res.sendFile(filePath);
+    return res.sendFile(join(__dirname, '..', 'public', 'index.html'));
   }
 }
