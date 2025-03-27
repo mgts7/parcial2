@@ -46,15 +46,19 @@ export class BattlesService {
   }
 
   async getBattlesWithIndex() {
-    const battles = await this.battleRepository.find();
+    const battles = await this.battleRepository.find({
+      relations: ['contestant1', 'contestant2', 'winner'],
+    });
     return battles.map((battle, index) => ({
+      id: battle.id,  // Incluimos el id
       index: index + 1, // Empieza en 1
       contestant1: battle.contestant1,
       contestant2: battle.contestant2,
-      winner: battle.winner ?? '❓ Pendiente',
+      winner: battle.winner ? battle.winner.nickname : '❓ Pendiente',
       status: battle.winner ? '✅ Finalizada' : '⌛ En curso'
     }));
   }
+  
   
   async getBattleByIndex(index: number) {
     console.log(`🔍 Buscando batalla con índice ${index}`);
@@ -210,40 +214,44 @@ export class BattlesService {
     console.log(`💰 ${dictator.name} apuesta ${amount} por ${contestant.nickname}. Saldo actual: ${dictator.plata}`);
   }
 
-  startBattle(fight: { contestant1: Contestant; contestant2: Contestant }, simulate: boolean): { winner: Contestant; loser: Contestant }{
+  startBattle(fight: { contestant1: Contestant; contestant2: Contestant }, simulate: boolean): { winner: Contestant; loser: Contestant } {
     let { contestant1, contestant2 } = fight;
-    console.log(`🔥 Proxima batalla: ${contestant1.nickname} vs ${contestant2.nickname} 🔥`);
+  
+    if (!contestant1 || !contestant2) {
+      throw new Error("❌ Error: No se encontraron los concursantes para la batalla.");
+    }
+  
+    console.log(`🔥 Próxima batalla: ${contestant1.nickname} vs ${contestant2.nickname} 🔥`);
     
     this.dictators.forEach(dictator => {
       this.placeBet(dictator, fight);
     });
-
+  
     let attacker = contestant1.agility >= contestant2.agility ? contestant1 : contestant2;
     let defender = attacker === contestant1 ? contestant2 : contestant1;
-
+  
     console.log(`👉 ${attacker.nickname} ataca primero por mayor agilidad.`);
-
+  
     while (contestant1.health > 0 && contestant2.health > 0) {
-      console.log(`
-⚔️ Turno de ${attacker.nickname}`);
+      console.log(`⚔️ Turno de ${attacker.nickname}`);
       let damage = attacker.strength;
       defender.health -= damage;
-      console.log(`💥 ${attacker.nickname} ataca a ${defender.nickname} causando ${damage} de dano.`);
+      console.log(`💥 ${attacker.nickname} ataca a ${defender.nickname} causando ${damage} de daño.`);
       console.log(`❤️ ${contestant1.nickname}: ${contestant1.health} HP, ${contestant2.nickname}: ${contestant2.health} HP`);
-
+  
       if (defender.health <= 0) break;
       [attacker, defender] = [defender, attacker];
     }
-
+  
     let winner = contestant1.health > 0 ? contestant1 : contestant2;
     let loser = winner === contestant1 ? contestant2 : contestant1;
+  
     console.log(`🏆 El ganador es ${winner.nickname}!`);
     this.resolveBets(winner);
     console.log(`🎖️ Estado final: ${winner.nickname} tiene ${winner.health} HP restantes.`);
-
+  
     return { winner, loser };
   }
-
   private resolveBets(winner: Contestant) {
     this.bets.forEach((bet) => {
       if (bet.contestant === winner) {

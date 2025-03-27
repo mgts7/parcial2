@@ -85,13 +85,15 @@ async function mainMenu() {
     } else if (choice === '2') {
       const pendingBattles = await battleService.getBattlesWithIndex();
       const nextBattle = pendingBattles.find(b => b.status === '⌛ En curso');
-
       if (nextBattle) {
-        console.log(`\n⚔️ Iniciando batalla ${nextBattle.index}: ${nextBattle.contestant1} vs ${nextBattle.contestant2}`);
-        await battleService.startBattleWithUpdate(nextBattle, false);
+        // Recuperar la batalla completa usando su id
+        const fullBattle = await battleService.getBattleById(nextBattle.id);
+        console.log(`\n⚔️ Iniciando batalla ${nextBattle.index}: ${nextBattle.contestant1.nickname} vs ${nextBattle.contestant2.nickname}`);
+        await battleService.startBattleWithUpdate(fullBattle, false);
       } else {
         console.log('✅ No quedan batallas pendientes.');
       }
+     
     } else if (choice === '3') {
       console.log('👋 Saliendo...');
       break;
