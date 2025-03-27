@@ -1,15 +1,19 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column ,JoinColumn,ManyToOne} from 'typeorm';
+import { Contestant } from '../../contestants/entities/contestant.entity';
 
 @Entity()
 export class Battles {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid' })
-  contestant_1: string;
-
-  @Column({ type: 'uuid' })
-  contestant_2: string;
+  @ManyToOne(() => Contestant)
+  @JoinColumn({ name: 'contestant1' })
+  contestant1: Contestant;
+  
+  @ManyToOne(() => Contestant)
+  @JoinColumn({ name: 'contestant2' })
+  contestant2: Contestant;
+  
 
   @Column({ type: 'uuid', nullable: true })
   winner_id: string;

@@ -2,13 +2,28 @@ import { Repository } from 'typeorm';
 import { BattlesService } from './src/battles/battles.service';
 import { Contestant, ContestantStatus } from './src/contestants/entities/contestant.entity';
 import { Battles } from 'src/battles/entities/battle.entity';
+import * as readlineSync from 'readline-sync';
 
-// Crea la instancia del servicio de batallas
-const mockRepository = {} as Repository<Battles>;
 
-const battlesService = new BattlesService(mockRepository);
+const mockBattleRepository: Partial<Repository<Battles>> = {
+  find: async () => [], // Simula una respuesta vacía de find()
+  save: async (entity) => Array.isArray(entity) ? entity : [entity],
+};
+
+// Mock del repositorio de concursantes
+const mockContestantRepository: Partial<Repository<Contestant>> = {
+  find: async () => [], // Simula una respuesta vacía de find()
+  save: async (entity) => Array.isArray(entity) ? entity : [entity],
+};
+
+// Crea la instancia de BattlesService con los mocks
+const battleService = new BattlesService(
+  mockBattleRepository as Repository<Battles>,
+  mockContestantRepository as Repository<Contestant>,
+);
+
 // Registrar al dictador antes de cualquier acción
-battlesService.promptRegisterDictator();
+battleService.promptRegisterDictator();
 
 const contestants: Contestant[] = [
   {
@@ -109,18 +124,46 @@ const contestants: Contestant[] = [
   },
 ];
 
-console.log('Iniciando test de batallas...');
-
-// Registra los concursantes para el torneo
-
-//battlesService.registerContestants(contestants);
 
 
-// Configura la batalla con los primeros concursantes registrados
-const fight = { contestant1: contestants[0], contestant2: contestants[1] };
 
-// Simulación: cambia a `true` si quieres que la IA controle la batalla automáticamente.
-const simulate = false; 
+async function mainMenu() {
+  if (!battleService) {
+    console.error("❌ battleService no ha sido inicializado.");
+    return;
+  }
 
-// Inicia la batalla
-battlesService.startBattle(fight, simulate);
+  while (true) {
+    console.log('\n1. 🔄 Ver estado del torneo');
+    console.log('2. ⚔️ Iniciar la siguiente batalla');
+    console.log('3. ❌ Salir');
+
+    const choice = readlineSync.question('Selecciona una opcion: ');
+
+    if (choice === '1') {
+      const battles = await battleService.getBattlesWithIndex();
+      console.log('\n📜 Estado actual del torneo:');
+      battles.forEach(battle => 
+        console.log(`${battle.index}. ${battle.contestant1} vs ${battle.contestant2} | ${battle.status} | 🏆 ${battle.winner}`)
+      );
+    } else if (choice === '2') {
+      const pendingBattles = await battleService.getBattlesWithIndex();
+      const nextBattle = pendingBattles.find(b => b.status === '⌛ En curso');
+      
+      if (nextBattle) {
+        console.log(`\n⚔️ Iniciando batalla ${nextBattle.index}: ${nextBattle.contestant1} vs ${nextBattle.contestant2}`);
+        await battleService.startBattleWithUpdate(nextBattle, false);
+      } else {
+        console.log('✅ No quedan batallas pendientes.');
+      }
+    } else if (choice === '3') {
+      console.log('👋 Saliendo...');
+      break;
+    }
+  }
+}
+
+// 🔥 Llamar a la función en un `async IIFE`
+(async () => {
+  await mainMenu();
+})();

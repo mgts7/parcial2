@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Contestant } from 'src/contestants/entities/contestant.entity';
+import { Contestant } from '../contestants/entities/contestant.entity';
 import { Dictator } from 'src/dictators/entities/dictator.entity';
 import * as readlineSync from 'readline-sync';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,6 +7,7 @@ import { DeepPartial, Repository } from 'typeorm';
 import { CreateBattleDto } from './dto/create-battle.dto';
 import { Battles } from './entities/battle.entity';
 import { UpdateBattleDto } from './dto/update-battle.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 
@@ -14,13 +15,74 @@ export class BattlesService {
   constructor(
     @InjectRepository(Battles)
     private readonly battleRepository: Repository<Battles>,
-  ) {}
+  
+  @InjectRepository(Contestant)
+    private readonly contestantRepository: Repository<Contestant>
+  ) {
+    // this.initializeContestants().then(() => this.generateBattles());
+  }
+
+  async initializeContestants() {
+    this.contestants = await this.contestantRepository.find();
+    console.log("📋 Concursantes:", this.contestants.map(c => ({
+      nickname: c.nickname,
+      strength: c.strength,
+      agility: c.agility,
+      health: c.health
+    })));
+  }
 
   async create(createBattleDto: CreateBattleDto): Promise<Battles> {
     const battle = this.battleRepository.create(createBattleDto as DeepPartial<Battles>);
     return this.battleRepository.save(battle);
   }
   
+  async getAllBattles() {
+    return await this.battleRepository.find();
+  }
+
+  async getBattleById(id: string) {
+    return await this.battleRepository.findOne({ where: { id } });
+  }
+
+  async getBattlesWithIndex() {
+    const battles = await this.battleRepository.find();
+    return battles.map((battle, index) => ({
+      index: index + 1, // Empieza en 1
+      contestant1: battle.contestant1,
+      contestant2: battle.contestant2,
+      winner: battle.winner ?? '❓ Pendiente',
+      status: battle.winner ? '✅ Finalizada' : '⌛ En curso'
+    }));
+  }
+  
+  async getBattleByIndex(index: number) {
+    console.log(`🔍 Buscando batalla con índice ${index}`);
+    const battles = await this.getBattlesWithIndex();
+    return battles.find(battle => battle.index === index);
+  }
+  
+  async startBattleWithUpdate(fight, simulate) {
+    if (!fight || !fight.contestant1 || !fight.contestant2) {
+      console.error("❌ Error: La batalla no tiene concursantes válidos.");
+      return;
+    }
+  
+    const result = await this.startBattle(fight, simulate);
+    
+    if (!result) {
+      console.error("❌ Error al ejecutar la batalla.");
+      return;
+    }
+  
+    // Actualizar el torneo eliminando al perdedor
+    const { winner, loser } = result;
+    await this.contestantRepository.delete({ id: loser.id });
+  
+    console.log(`🏆 Ganador: ${winner.nickname} | ☠️ Perdedor: ${loser.nickname}`);
+  }
+  
+
 
   async findAll(): Promise<Battles[]> {
     return this.battleRepository.find();
@@ -51,13 +113,62 @@ export class BattlesService {
       loser: battle.loser.name,
     }));
   }
+  async generateBattles() {
+    if (this.contestants.length < 2) {
+      console.log("❌ No hay suficientes concursantes para generar batallas.");
+      return;
+    }
+  
+    // Vacía la colección de batallas internas
+    this.battles = [];
+    let shuffledContestants = [...this.contestants].sort(() => Math.random() - 0.5);
+    
+    // Para cada pareja de concursantes, crea un objeto battle
+    for (let i = 0; i < shuffledContestants.length; i += 2) {
+      if (i + 1 < shuffledContestants.length) {
+        const contestant1 = shuffledContestants[i];
+        const contestant2 = shuffledContestants[i + 1];
+  
+        if (!contestant1 || !contestant2) {
+          console.error("❌ Error: Uno de los concursantes es inválido.");
+          continue;
+        }
+  
+        const newBattle: Battles = this.battleRepository.create({
+          contestant1,
+          contestant2,
+          death_occurred: false,
+          injuries: "",
+        });
+        
+        
+        // Guarda la batalla en la base de datos
+        await this.battleRepository.save(newBattle);
+        // También la guarda en la colección interna, si la necesitas para otro propósito
+        this.battles.push({
+          round: 1,
+          fights: [{ contestant1: shuffledContestants[i], contestant2: shuffledContestants[i + 1] }],
+        });
+        
+      }
+    }
+  
+    console.log('\n📜 Estado actual del torneo:');
+    this.battles.forEach((battle) => {
+      const fightDescriptions = battle.fights.map(fight =>
+        `${fight.contestant1.nickname} VS ${fight.contestant2.nickname}`
+      ).join(', ');
+      console.log(`Round ${battle.round}, Fights: ${fightDescriptions}`);
+    });
+  }
+  
 
   private contestants: Contestant[] = [];
   private battles: { round: number; fights: { contestant1: Contestant; contestant2: Contestant }[] }[] = [];
   private dictators: Dictator[] = [];
   private bets: { dictator: Dictator; contestant: Contestant; amount: number }[] = [];
 
-  promptRegisterDictator() {
+  async promptRegisterDictator() {
     const name = readlineSync.question('Ingrese su nombre: ');
     const territory = readlineSync.question('Ingrese su territorio: ');
     const plata = readlineSync.questionInt('Ingrese la cantidad de plata: ');
@@ -99,7 +210,7 @@ export class BattlesService {
     console.log(`💰 ${dictator.name} apuesta ${amount} por ${contestant.nickname}. Saldo actual: ${dictator.plata}`);
   }
 
-  startBattle(fight: { contestant1: Contestant; contestant2: Contestant }, simulate: boolean): void {
+  startBattle(fight: { contestant1: Contestant; contestant2: Contestant }, simulate: boolean): { winner: Contestant; loser: Contestant }{
     let { contestant1, contestant2 } = fight;
     console.log(`🔥 Proxima batalla: ${contestant1.nickname} vs ${contestant2.nickname} 🔥`);
     
@@ -125,9 +236,12 @@ export class BattlesService {
     }
 
     let winner = contestant1.health > 0 ? contestant1 : contestant2;
+    let loser = winner === contestant1 ? contestant2 : contestant1;
     console.log(`🏆 El ganador es ${winner.nickname}!`);
     this.resolveBets(winner);
     console.log(`🎖️ Estado final: ${winner.nickname} tiene ${winner.health} HP restantes.`);
+
+    return { winner, loser };
   }
 
   private resolveBets(winner: Contestant) {
