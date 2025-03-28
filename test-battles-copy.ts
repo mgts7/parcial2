@@ -5,13 +5,13 @@ import { Battles } from './src/battles/entities/battle.entity';
 import * as readlineSync from 'readline-sync';
 import { DataSource } from 'typeorm';
 import { createConnection } from 'typeorm';
-import 'dotenv/config'; // Asegura que .env se carga antes de usarlo
+import 'dotenv/config'; 
 import { DictatorsService } from './src/dictators/dictators.service';
 import { Dictator } from './src/dictators/entities/dictator.entity';
 
 
 
-let battleService: BattlesService | null = null; // Definir la variable de manera explícita
+let battleService: BattlesService | null = null;
 let dictatorsService!: DictatorsService; //
 
 async function main() {
@@ -21,7 +21,7 @@ async function main() {
       host: process.env.DB_HOST,
       port: Number(process.env.DB_PORT) || 5432,
       username: process.env.DB_USER,
-      password: String(process.env.DB_PASSWORD), // 🔥 Fuerza a que sea un string
+      password: String(process.env.DB_PASSWORD), 
       database: process.env.DB_NAME,
       ssl: false,
       entities: [Battles, Contestant, Dictator],
@@ -37,28 +37,27 @@ async function main() {
 
     dictatorsService = new DictatorsService(dataSource.getRepository(Dictator));
 
-    console.log(`✅ battleService inicializado: ${battleService !== null}`);
-    console.log(`✅ dictatorsService inicializado: ${dictatorsService !== null}`);
+    console.log(`battleService inicializado: ${battleService !== null}`);
+    console.log(`dictatorsService inicializado: ${dictatorsService !== null}`);
 
   } catch (error) {
-    console.error('❌ Error al inicializar battleService:', error);
+    console.error('Error al inicializar battleService:', error);
   }
 }
 
 
 
-// 🔥 Iniciar el proceso
 (async () => {
   await main();
 
   if (!battleService || !dictatorsService) {
-    console.error("❌ No se pudo inicializar uno de los servicios.");
+    console.error("No se pudo inicializar uno de los servicios.");
     return;
   }
 
   const dictator = await dictatorsService.promptRegisterDictator();
 
-  if (dictator) { // Solo mostrar el menú si se registró correctamente
+  if (dictator) { 
     await mainMenu();
   }
 })();
@@ -67,14 +66,14 @@ async function main() {
 
 async function mainMenu() {
   if (!battleService) {
-    console.error("❌ battleService no ha sido inicializado.");
+    console.error("battleService no ha sido inicializado.");
     return;
   }
 
   while (true) {
-    console.log('\n1. 🔄 Ver estado del torneo');
-    console.log('2. ⚔️ Iniciar la siguiente batalla');
-    console.log('3. ❌ Salir');
+    console.log('\n1. Ver estado del torneo');
+    console.log('2. Iniciar la siguiente batalla');
+    console.log('3. Salir');
 
     const choice = readlineSync.question('Selecciona una opcion: ');
 
@@ -84,22 +83,24 @@ async function mainMenu() {
       const battles = await battleService.getBattlesWithIndex();
     } else if (choice === '2') {
       const pendingBattles = await battleService.getBattlesWithIndex();
-      const nextBattle = pendingBattles.find(b => b.status === '⌛ En curso');
+      const nextBattle = pendingBattles.find(b => b.status === 'En curso');
       if (nextBattle) {
         // Recuperar la batalla completa usando su id
         const fullBattle = await battleService.getBattleById(nextBattle.id);
-        console.log(`\n⚔️ Iniciando batalla ${nextBattle.index}: ${nextBattle.contestant1.nickname} vs ${nextBattle.contestant2.nickname}`);
+        console.log(`\nIniciando batalla ${nextBattle.index}: ${nextBattle.contestant1.nickname} vs ${nextBattle.contestant2.nickname}`);
         await battleService.startBattleWithUpdate(fullBattle, false);
       } else {
-        console.log('✅ No quedan batallas pendientes.');
+        console.log('No quedan batallas pendientes.');
       }
      
     } else if (choice === '3') {
-      console.log('👋 Saliendo...');
+      console.log('Saliendo...');
       break;
     }
   }
 }
+
+
 
 
 

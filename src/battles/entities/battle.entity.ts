@@ -14,8 +14,7 @@ export class Battles {
   @JoinColumn({ name: 'contestant2' })
   contestant2: Contestant;
 
-  // Agregamos la relación para winner
-  @ManyToOne(() => Contestant, { nullable: true })
+  @ManyToOne(() => Contestant)
   @JoinColumn({ name: 'winner_id' })
   winner: Contestant;
 
@@ -25,9 +24,5 @@ export class Battles {
   @Column()
   injuries: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  date: Date;
-
-  // Puedes eliminar la propiedad loser si no la usas directamente
   loser: any;
 }

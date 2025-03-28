@@ -6,7 +6,7 @@ import { Battles } from './entities/battle.entity';
 import { Contestant } from '../contestants/entities/contestant.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Battles, Contestant])], // Importa Battle como entidad
+  imports: [TypeOrmModule.forFeature([Battles, Contestant])],
   providers: [BattlesService],
   controllers: [BattlesController],
   exports: [BattlesService],

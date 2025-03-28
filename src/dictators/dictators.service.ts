@@ -35,7 +35,7 @@ export class DictatorsService {
 
       return await this.registerDictator(dictator);
     } catch (error) {
-      console.error('❌ Error al registrar dictador:', error);
+      console.error('Error al registrar dictador:', error);
       return null;
     }
   }
@@ -43,10 +43,10 @@ export class DictatorsService {
   async registerDictator(dictator: Dictator): Promise<Dictator> {
     try {
       const savedDictator = await this.dictatorRepository.save(dictator);
-      console.log(`✅ Dictador registrado: ${savedDictator.name}, Territorio: ${savedDictator.territory}, Plata: ${savedDictator.plata}`);
+      console.log(`Dictador registrado: ${savedDictator.name}, Territorio: ${savedDictator.territory}, Plata: ${savedDictator.plata}`);
       return savedDictator;
     } catch (error) {
-      console.error('❌ Error al guardar en la base de datos:', error);
+      console.error('Error al guardar en la base de datos:', error);
       throw error;
     }
   }
